@@ -30,8 +30,12 @@ def cmd_serve(a: argparse.Namespace) -> int:
     for noisy in ("hpack", "h2", "asyncio"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     log = logging.getLogger("dactyloscope")
-    cert_dir = Path(a.certs)
-    ca_pem, pem, key = certs.ensure_certs(cert_dir, a.san)
+    if a.tls_cert and a.tls_key:
+        # A publicly trusted certificate (e.g. Let's Encrypt); /ca.pem then serves its chain.
+        pem, key = Path(a.tls_cert), Path(a.tls_key)
+        ca_pem = pem
+    else:
+        ca_pem, pem, key = certs.ensure_certs(Path(a.certs), a.san)
     known = KnownShapes().load([Path(d) for d in a.captures] if a.captures else None)
     log.info("loaded %d TLS and %d HTTP/2 reference captures", len(known.tls), len(known.h2))
     store = Store(Path(a.data), keep=a.keep)
@@ -113,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--plain-port", type=int, default=int(os.environ.get("DACTYLOSCOPE_PLAIN_PORT", "8080")), help="0 disables the plain listener")
     s.add_argument("--data", default=os.environ.get("DACTYLOSCOPE_DATA", str(DATA)))
     s.add_argument("--certs", default=os.environ.get("DACTYLOSCOPE_CERTS", str(DATA / "certs")))
+    s.add_argument("--tls-cert", default=os.environ.get("DACTYLOSCOPE_TLS_CERT"), help="PEM certificate chain to serve instead of the self-signed one")
+    s.add_argument("--tls-key", default=os.environ.get("DACTYLOSCOPE_TLS_KEY"), help="private key for --tls-cert")
     s.add_argument("--captures", action="append", help="directory with captures/-style reference captures (repeatable)")
     s.add_argument("--san", action="append", help="extra hostname/IP for the certificate (repeatable)")
     s.add_argument("--keep", type=int, default=500, help="reports to keep on disk")
