@@ -1,0 +1,101 @@
+{
+ "_meta": {
+  "browser": "Chrome for Testing 148.0.7778.178 (linux64, --headless=new, fresh profile)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_clienthello.py",
+  "note": "extension order is randomised by Chrome per connection (permute_extensions); compare as a set. Captured against 127.0.0.1, hence no SNI (0). GREASE ids collapsed. Fresh Chrome for Testing profiles send an empty trust_anchors list (0000); an updated stable install sends the Chrome Root Store list (see chrome-152-stable-clienthello.json)."
+ },
+ "ciphers": [
+  "0x1301",
+  "0x1302",
+  "0x1303",
+  "0xc02b",
+  "0xc02f",
+  "0xc02c",
+  "0xc030",
+  "0xcca9",
+  "0xcca8",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  "GREASE",
+  13,
+  23,
+  27,
+  65281,
+  65037,
+  11,
+  45,
+  35,
+  5,
+  43,
+  17613,
+  18,
+  16,
+  10,
+  51,
+  51764,
+  "GREASE"
+ ],
+ "groups": [
+  "GREASE",
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18"
+ ],
+ "sigalgs": [
+  "0x403",
+  "0x804",
+  "0x401",
+  "0x503",
+  "0x805",
+  "0x501",
+  "0x806",
+  "0x601"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "GREASE",
+   1
+  ],
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ]
+ ],
+ "compress_cert": [
+  "0x2"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "extension_bodies_hex": {
+  "27242": "",
+  "23": "",
+  "65281": "00",
+  "65037": "0000010001380020dba2d930206cf46814906fd9c85c918112bab1155642adbcdd5a8ff72c16fd2f00d06ad274898b41f7eb0f45eda9307c343a83ce81f497c2ada3718f7c82091e339ec09f266f6bf1b00d4feaa0ba882571930737f220a75bd9956ce8089ec056a32d17d0c35e715d101f8d0aac3b0629755445a42966fb624c9e7409955658301a134c7b288356e8e3de6bfe4fc2350a7033e0b0ba10fa9f6a3504235bc865ce364fc47687d3f7ad52131f6ae45c9ce711c3a7eb60a717de02e059d0a9ea88aecda2cb78154dd3ddfad4aec1535275d0b963cde89f732bac731623b95b28a0d2ea1a9b26b43825d652224d9e3bfb642fa11b",
+  "11": "0100",
+  "35": "",
+  "5": "0100000000",
+  "17613": "0003026832",
+  "18": "",
+  "51764": "0000",
+  "19018": "00"
+ },
+ "client_hello_len": 1771
+}

@@ -1,0 +1,104 @@
+{
+ "_meta": {
+  "browser": "Chrome for Testing 150.0.7871.124 (linux64, --headless=new, fresh profile)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_clienthello.py",
+  "note": "extension order is randomised by Chrome per connection (permute_extensions); compare as a set. Captured against 127.0.0.1, hence no SNI (0). GREASE ids collapsed. Fresh Chrome for Testing profiles send an empty trust_anchors list (0000); an updated stable install sends the Chrome Root Store list (see chrome-152-stable-clienthello.json)."
+ },
+ "ciphers": [
+  "0x1301",
+  "0x1302",
+  "0x1303",
+  "0xc02b",
+  "0xc02f",
+  "0xc02c",
+  "0xc030",
+  "0xcca9",
+  "0xcca8",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  "GREASE",
+  18,
+  51,
+  23,
+  65281,
+  16,
+  35,
+  11,
+  13,
+  45,
+  27,
+  51764,
+  17613,
+  5,
+  65037,
+  43,
+  10,
+  "GREASE"
+ ],
+ "groups": [
+  "GREASE",
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18"
+ ],
+ "sigalgs": [
+  "0x904",
+  "0x905",
+  "0x906",
+  "0x403",
+  "0x804",
+  "0x401",
+  "0x503",
+  "0x805",
+  "0x501",
+  "0x806",
+  "0x601"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "GREASE",
+   1
+  ],
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ]
+ ],
+ "compress_cert": [
+  "0x2"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "extension_bodies_hex": {
+  "23130": "",
+  "18": "",
+  "23": "",
+  "65281": "00",
+  "35": "",
+  "11": "0100",
+  "51764": "0000",
+  "17613": "0003026832",
+  "5": "0100000000",
+  "65037": "0000010001930020aa409eb845e79474a2317e5b347eb47817223de6559790f69d9070701bce227500f0cf8825f9a65027575616bb1066ff8717c1654f0e4a0e22770a150224fca2a1321d8dd9db074d3d3ddb5572e2cb8630d44579d2d95d1b7b1ccee7245400bac9030ae9e29d183d2ea6a080f694149a6a940827b60eade6376d1d65f3b191969705f2de757b76251dfb74bb45863717a4d5960c483dba967862d3a0bbe914b7232e94228924958d6bf9cbc506d85a3bd71fd994762132c71040688acc97db682b93f928ad7ceeed2829d190182f3ea6098f3642053841742997127b0256984a86d2a44643f56e1211e1a412897444bbd954b7ccc0836a3b638e8acb292e34cffede665cb19845fc2ac1dc5cd0d998e23960",
+  "51914": "00"
+ },
+ "client_hello_len": 1809
+}

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dactyloscope report</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><div id="top"></div><div class="wrap" id="root"><p class="muted">Loading…</p></div>
+<script src="/static/ui.js"></script>
+<script>
+(function () {
+  document.getElementById('top').replaceWith(Dacty.topbar('Reports'));
+  var id = location.pathname.split('/').pop(); var root = document.getElementById('root');
+  function load(wait) {
+    Dacty.getJSON('/api/report/' + id + (wait ? '?wait=25' : '')).then(function (r) {
+      document.title = 'Dactyloscope ' + (r.tag || r.id) + ' — ' + (r.analysis.verdict || '');
+      Dacty.renderReport(root, r);
+      if (!r.done) { root.insertBefore(Dacty.h('div', { class: 'notice', text: 'Probes are still running in the inspected browser; this page refreshes as sections arrive.' }), root.children[2]); setTimeout(function () { load(true); }, 1500); }
+    }).catch(function (e) { root.innerHTML = ''; root.appendChild(Dacty.h('div', { class: 'notice err', text: 'Could not load report ' + id + ': ' + e.message })); });
+  }
+  load(false);
+})();
+</script></body></html>

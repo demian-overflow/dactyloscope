@@ -1,0 +1,99 @@
+{
+ "_meta": {
+  "browser": "Chrome for Testing 147.0.7727.117 (linux64, --headless=new, fresh profile)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_clienthello.py",
+  "note": "Baseline (legacy) shape: no trust_anchors, classical sigalgs only. Extension order is randomised per connection; compare as a set. Captured against 127.0.0.1, hence no SNI (0)."
+ },
+ "ciphers": [
+  "0x1301",
+  "0x1302",
+  "0x1303",
+  "0xc02b",
+  "0xc02f",
+  "0xc02c",
+  "0xc030",
+  "0xcca9",
+  "0xcca8",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  "GREASE",
+  23,
+  27,
+  17613,
+  16,
+  45,
+  18,
+  11,
+  51764,
+  51,
+  5,
+  13,
+  65037,
+  65281,
+  35,
+  10,
+  43,
+  "GREASE"
+ ],
+ "groups": [
+  "GREASE",
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18"
+ ],
+ "sigalgs": [
+  "0x403",
+  "0x804",
+  "0x401",
+  "0x503",
+  "0x805",
+  "0x501",
+  "0x806",
+  "0x601"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "GREASE",
+   1
+  ],
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ]
+ ],
+ "compress_cert": [
+  "0x2"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "extension_bodies_hex": {
+  "23": "",
+  "17613": "0003026832",
+  "18": "",
+  "11": "0100",
+  "51764": "0000",
+  "5": "0100000000",
+  "65037": "00000100014500201ee7575640d5566609be2463d27e0a3f0aa24e7a5afc9434d15bd9b448f4d63600d0d6a0938e9e8cbd5b15ba27cc7deff87b4535d90fe53a89a3ce69c8179df78bba9ed21a113810c974a1cb5ba8c884d2618447307cfca63ae212b0ec908e4f8aeba8e2e9aa0e277a2a3a4becd0fd9625a40720da6a5cf76f911210b4b925b2898cb809b77a6ecc4210d7dd35424b8762bdb7e55d49a9275942f5c59eeb1576bf13ffb564f2310afbf47d32cd5bba5340431223afa21885b9b93627f57efd9ce43e09b0bc1676a0ef97466fd7bd4bd50789504e3fbfbdd548c0deaee95869bdf3f284352474b8a583b8dfde367412c1afc8",
+  "65281": "00",
+  "35": ""
+ },
+ "client_hello_len": 1771
+}

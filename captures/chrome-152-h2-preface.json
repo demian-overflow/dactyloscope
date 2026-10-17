@@ -1,0 +1,70 @@
+{
+ "_meta": {
+  "browser": "Google Chrome 152.0.7977.64 stable (linux x86_64, --headless=new)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_h2_preface.py",
+  "note": "Akamai HTTP/2 fingerprint = SETTINGS|WINDOW_UPDATE|PRIORITY|pseudo-header order."
+ },
+ "akamai_fingerprint": "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p",
+ "frames": [
+  {
+   "type": "SETTINGS",
+   "stream": 0,
+   "flags": 0,
+   "len": 24,
+   "settings": [
+    [
+     1,
+     65536
+    ],
+    [
+     2,
+     0
+    ],
+    [
+     4,
+     6291456
+    ],
+    [
+     6,
+     262144
+    ]
+   ]
+  },
+  {
+   "type": "WINDOW_UPDATE",
+   "stream": 0,
+   "flags": 0,
+   "len": 4,
+   "increment": 15663105
+  },
+  {
+   "type": "HEADERS",
+   "stream": 1,
+   "flags": 37,
+   "len": 451,
+   "exclusive": true,
+   "dep": 0,
+   "weight": 256,
+   "headers": [
+    ":method",
+    ":authority",
+    ":scheme",
+    ":path",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "user-agent",
+    "accept",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "accept-encoding",
+    "accept-language",
+    "<huff>"
+   ]
+  }
+ ]
+}

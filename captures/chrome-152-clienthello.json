@@ -1,0 +1,91 @@
+{
+ "ciphers": [
+  "0x1301",
+  "0x1302",
+  "0x1303",
+  "0xc02b",
+  "0xc02f",
+  "0xc02c",
+  "0xc030",
+  "0xcca9",
+  "0xcca8",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  "GREASE",
+  10,
+  16,
+  51,
+  13,
+  23,
+  11,
+  51764,
+  65037,
+  5,
+  45,
+  35,
+  17613,
+  27,
+  65281,
+  43,
+  18,
+  "GREASE"
+ ],
+ "groups": [
+  "GREASE",
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18"
+ ],
+ "sigalgs": [
+  "0x7a7a",
+  "0x904",
+  "0x905",
+  "0x906",
+  "0x403",
+  "0x804",
+  "0x401",
+  "0x503",
+  "0x805",
+  "0x501",
+  "0x806",
+  "0x601"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "GREASE",
+   1
+  ],
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ]
+ ],
+ "compress_cert": [
+  "0x2"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "_meta": {
+  "browser": "Google Chrome 152.0.7977.64 (linux x86_64, --headless=new)",
+  "captured": "2026-09-03",
+  "tool": "tools/capture_clienthello.py",
+  "note": "extension order is randomised by Chrome per connection (permute_extensions); compare as a set"
+ }
+}

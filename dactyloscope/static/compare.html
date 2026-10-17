@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dactyloscope compare</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><div id="top"></div><div class="wrap" id="root"></div>
+<script src="/static/ui.js"></script>
+<script>
+(function () {
+  var h = Dacty.h; document.getElementById('top').replaceWith(Dacty.topbar('Compare'));
+  var root = document.getElementById('root'); var q = new URLSearchParams(location.search);
+  var a = h('input', { placeholder: 'report id, latest, or baseline:name', value: q.get('a') || '' }); var b = h('input', { placeholder: 'report id, latest, or baseline:name', value: q.get('b') || '' });
+  var go = h('button', { class: 'primary', text: 'Compare' });
+  go.addEventListener('click', function () { location.search = '?a=' + encodeURIComponent(a.value) + '&b=' + encodeURIComponent(b.value); });
+  root.appendChild(h('h1', { text: 'Compare two reports' }));
+  root.appendChild(h('p', { class: 'lede', text: 'Every field that differs, volatile ones (ids, timestamps, hashes that change per session) left out. Typical use: the browser under test as A, a real-browser baseline as B.' }));
+  root.appendChild(h('div', { class: 'bar' }, [h('span', { text: 'A' }), a, h('span', { text: 'B' }), b, go]));
+  var out = h('div'); root.appendChild(out);
+  if (q.get('a') && q.get('b')) Dacty.getJSON('/api/compare?a=' + encodeURIComponent(q.get('a')) + '&b=' + encodeURIComponent(q.get('b'))).then(function (d) { Dacty.renderDiff(out, d); }).catch(function (e) { out.appendChild(h('div', { class: 'notice err', text: e.message })); });
+})();
+</script></body></html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dactyloscope reports</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><div id="top"></div><div class="wrap" id="root"></div>
+<script src="/static/ui.js"></script>
+<script>
+(function () {
+  var h = Dacty.h; document.getElementById('top').replaceWith(Dacty.topbar('Reports'));
+  var root = document.getElementById('root'); var q = new URLSearchParams(location.search); var tag = q.get('tag') || '';
+  root.appendChild(h('h1', { text: 'Reports' }));
+  var input = h('input', { placeholder: 'filter by tag', value: tag }); var sel = []; var cmp = h('a', { class: 'btn', href: '#', text: 'Compare selected' });
+  var bar = h('div', { class: 'bar' }, [input, h('button', { text: 'Filter' }), h('span', { class: 'sp' }), cmp, h('a', { class: 'btn primary', href: '/', text: 'Inspect this browser' })]);
+  bar.children[1].addEventListener('click', function () { location.search = input.value ? '?tag=' + encodeURIComponent(input.value) : ''; });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') bar.children[1].click(); });
+  cmp.addEventListener('click', function (e) { e.preventDefault(); if (sel.length !== 2) { alert('Tick exactly two reports to compare.'); return; } location.href = '/compare?a=' + sel[0] + '&b=' + sel[1]; });
+  root.appendChild(bar);
+  var tbl = h('div'); root.appendChild(tbl);
+  Dacty.getJSON('/api/reports?limit=200' + (tag ? '&tag=' + encodeURIComponent(tag) : '')).then(function (j) {
+    if (!j.reports.length) { tbl.appendChild(h('div', { class: 'empty', text: 'No reports yet. Open / in the browser you want to inspect, or drive one there via WebDriver.' })); return; }
+    var t = h('table', { class: 'list' }); t.appendChild(h('tr', null, [h('th'), h('th', { text: 'Report' }), h('th', { text: 'Verdict' }), h('th', { text: 'Claims' }), h('th', { text: 'Engine' }), h('th', { text: 'JA3 / JA4' }), h('th', { text: 'HTTP/2' }), h('th', { text: 'From' })]));
+    j.reports.forEach(function (r) {
+      var cb = h('input', { type: 'checkbox' }); cb.addEventListener('change', function () { if (cb.checked) sel.push(r.id); else sel = sel.filter(function (x) { return x !== r.id; }); });
+      var cl = r.claimed || {};
+      t.appendChild(h('tr', null, [h('td', null, [cb]), h('td', null, [h('a', { href: '/r/' + r.id, text: r.label || r.id }), h('div', { class: 'small muted', text: (r.created || '') + (r.tag ? '  tag ' + r.tag : '') })]),
+        h('td', null, [h('span', { class: 'pill ' + (r.done ? r.verdict : 'pending'), text: r.done ? r.verdict + ' ' + r.score : 'pending' })]),
+        h('td', { text: (cl.family || '?') + ' ' + (cl.major || '') + ' / ' + (cl.os || '?') }), h('td', { text: r.detected_engine || '' }),
+        h('td', { class: 'mono', text: (r.ja3 || '—') + '\n' + (r.ja4 || '') }), h('td', { class: 'mono', text: r.akamai || '—' }), h('td', { class: 'mono', text: r.client_ip || '' })]));
+    });
+    tbl.appendChild(t);
+  }).catch(function (e) { tbl.appendChild(h('div', { class: 'notice err', text: e.message })); });
+  root.appendChild(h('h2', { text: 'Baselines' }));
+  root.appendChild(h('p', { class: 'lede', text: 'A baseline is a report from a browser you trust (open / in real Chrome or Firefox, then "Save as baseline"). Compare any report against it with baseline:<name>.' }));
+  var bl = h('div'); root.appendChild(bl);
+  Dacty.getJSON('/api/baselines').then(function (j) {
+    if (!j.baselines.length) { bl.appendChild(h('div', { class: 'empty', text: 'No baselines saved.' })); return; }
+    var t = h('table', { class: 'list' }); t.appendChild(h('tr', null, [h('th', { text: 'Name' }), h('th', { text: 'User agent' }), h('th', { text: 'JA3' }), h('th', { text: 'HTTP/2' }), h('th')]));
+    j.baselines.forEach(function (b) {
+      var del = h('button', { text: 'Delete' }); del.addEventListener('click', function () { if (confirm('Delete baseline ' + b.name + '?')) fetch('/api/baseline/' + b.name, { method: 'DELETE' }).then(function () { location.reload(); }); });
+      t.appendChild(h('tr', null, [h('td', { class: 'mono', text: b.name }), h('td', { class: 'small', text: b.user_agent || '' }), h('td', { class: 'mono', text: b.ja3 || '' }), h('td', { class: 'mono', text: b.akamai || '' }), h('td', null, [h('a', { class: 'btn', href: '/compare?b=baseline:' + b.name, text: 'Compare…' }), ' ', del])]));
+    });
+    bl.appendChild(t);
+  });
+})();
+</script></body></html>

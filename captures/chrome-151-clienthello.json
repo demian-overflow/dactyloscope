@@ -1,0 +1,106 @@
+{
+ "_meta": {
+  "browser": "Chrome for Testing 151.0.7922.138 (linux64, --headless=new, fresh profile)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_clienthello.py",
+  "note": "extension order is randomised by Chrome per connection (permute_extensions); compare as a set. Captured against 127.0.0.1, hence no SNI (0). GREASE ids collapsed. Fresh Chrome for Testing profiles send an empty trust_anchors list (0000); an updated stable install sends the Chrome Root Store list (see chrome-152-stable-clienthello.json)."
+ },
+ "ciphers": [
+  "0x1301",
+  "0x1302",
+  "0x1303",
+  "0xc02b",
+  "0xc02f",
+  "0xc02c",
+  "0xc030",
+  "0xcca9",
+  "0xcca8",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  "GREASE",
+  13,
+  43,
+  10,
+  51,
+  16,
+  4832,
+  51764,
+  27,
+  23,
+  65281,
+  65037,
+  17613,
+  11,
+  5,
+  45,
+  18,
+  35,
+  "GREASE"
+ ],
+ "groups": [
+  "GREASE",
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18"
+ ],
+ "sigalgs": [
+  "0x904",
+  "0x905",
+  "0x906",
+  "0x403",
+  "0x804",
+  "0x401",
+  "0x503",
+  "0x805",
+  "0x501",
+  "0x806",
+  "0x601"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "GREASE",
+   1
+  ],
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ]
+ ],
+ "compress_cert": [
+  "0x2"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "extension_bodies_hex": {
+  "56026": "",
+  "4832": "0000",
+  "51764": "0000",
+  "23": "",
+  "65281": "00",
+  "65037": "00000100016f00205afef2ac4599fdb61d862aa4639e8fc10b76685f10bae214bed2a2e31065493000905871f239855493c462413ba56a45a1a51958dd570a46c29bce162e2ae4225bce152f47d61a77fe09a4e23f3fa3b31da5340acf4a0c15d1d6799f048c9bf84ea8884aca9d15c346401d09d28decfb2fd9fa7beb573196ae68d2b904ec5e5ed0728c8518956f6b5ae81b0a459dbd5c2497a1bb286dda222c35f2e79445a41e45e7d1f0e7c5efbc6c34f4080b3cdbd6e80e",
+  "17613": "0003026832",
+  "11": "0100",
+  "5": "0100000000",
+  "18": "",
+  "35": "",
+  "23130": "00"
+ },
+ "client_hello_len": 1719
+}

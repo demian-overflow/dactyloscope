@@ -1,0 +1,75 @@
+{
+ "_meta": {
+  "browser": "Firefox 154.0 (snap, linux x86_64, --headless)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_h2_preface.py",
+  "note": "Firefox additionally sends a stream-level WINDOW_UPDATE on the first request stream (not part of the Akamai hash)."
+ },
+ "akamai_fingerprint": "1:65536;2:0;4:131072;5:16384|12517377|0|m,p,a,s",
+ "frames": [
+  {
+   "type": "SETTINGS",
+   "stream": 0,
+   "flags": 0,
+   "len": 24,
+   "settings": [
+    [
+     1,
+     65536
+    ],
+    [
+     2,
+     0
+    ],
+    [
+     4,
+     131072
+    ],
+    [
+     5,
+     16384
+    ]
+   ]
+  },
+  {
+   "type": "WINDOW_UPDATE",
+   "stream": 0,
+   "flags": 0,
+   "len": 4,
+   "increment": 12517377
+  },
+  {
+   "type": "HEADERS",
+   "stream": 3,
+   "flags": 37,
+   "len": 282,
+   "exclusive": false,
+   "dep": 0,
+   "weight": 42,
+   "headers": [
+    ":method",
+    ":path",
+    ":authority",
+    ":scheme",
+    "user-agent",
+    "accept",
+    "accept-language",
+    "accept-encoding",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>",
+    "<huff>"
+   ]
+  },
+  {
+   "type": "WINDOW_UPDATE",
+   "stream": 3,
+   "flags": 0,
+   "len": 4,
+   "increment": 12451840
+  }
+ ]
+}

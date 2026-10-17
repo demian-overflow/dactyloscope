@@ -1,0 +1,104 @@
+{
+ "_meta": {
+  "browser": "Firefox 154.0 (snap, linux x86_64, --headless)",
+  "captured": "2026-09-04",
+  "tool": "tools/capture_clienthello.py",
+  "note": "NSS uses a fixed extension order (SNI 0 leads when a hostname is used). Captured against 127.0.0.1, hence no SNI."
+ },
+ "ciphers": [
+  "0x1301",
+  "0x1303",
+  "0x1302",
+  "0xc02b",
+  "0xc02f",
+  "0xcca9",
+  "0xcca8",
+  "0xc02c",
+  "0xc030",
+  "0xc013",
+  "0xc014",
+  "0x9c",
+  "0x9d",
+  "0x2f",
+  "0x35"
+ ],
+ "extensions": [
+  23,
+  65281,
+  10,
+  11,
+  35,
+  16,
+  5,
+  34,
+  18,
+  51,
+  43,
+  13,
+  45,
+  28,
+  27,
+  65037
+ ],
+ "groups": [
+  "0x11ec",
+  "0x1d",
+  "0x17",
+  "0x18",
+  "0x19",
+  "0x100",
+  "0x101"
+ ],
+ "sigalgs": [
+  "0x403",
+  "0x503",
+  "0x603",
+  "0x804",
+  "0x805",
+  "0x806",
+  "0x401",
+  "0x501",
+  "0x601",
+  "0x203",
+  "0x201"
+ ],
+ "alpn": [
+  "h2",
+  "http/1.1"
+ ],
+ "keyshare": [
+  [
+   "0x11ec",
+   1216
+  ],
+  [
+   "0x1d",
+   32
+  ],
+  [
+   "0x17",
+   65
+  ]
+ ],
+ "compress_cert": [
+  "0x1",
+  "0x2",
+  "0x3"
+ ],
+ "supported_versions": [
+  "0x304",
+  "0x303"
+ ],
+ "extension_bodies_hex": {
+  "23": "",
+  "65281": "00",
+  "11": "0100",
+  "35": "",
+  "5": "0100000000",
+  "34": "00080403050306030203",
+  "18": "",
+  "28": "4001",
+  "65037": "0000010003580020880449eb5623763154db40d18aaec1f6875abcc39b146d65f3ba7676246c6bce00efa4b9a056ced7b5723ece2fd70b925bf85905e03c9766553ba8a4458b2ee068b9b8a41ad188413c9013e943f277bba53f310ec453e062df5708ad476aeabfb3c3daea6aaa0c64e3533ef4d9a4ea49c2cf8ee4bd68481defe210548bd8f6644cc4d946fc2abc1cf0831349691aa39e8373773e273e4a0689bf11f2514bbc2b6f86bcee78df780dee9867b6c033b795fb3b8a40615d146eb0e2ae5a52ad5bf887977b6acb747e59c707f5c9aea029a224c4998b358f8959658bd8146fc90b56e9a559ff51dd0e47965340f0f3a936b3018dc5c7489ef2b79fe210f10c44d85ff0d301912bd92d2d005eba7d69eb5912e8"
+ },
+ "client_hello_len": 1872
+}
