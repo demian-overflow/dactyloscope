@@ -16,27 +16,6 @@ would see, at every layer:
   workers, iframes, automation globals, patched natives, and JS-engine and API
   mismatches
 
-Each run becomes a report with findings (`fail` / `warn` / `info`), a score and
-a verdict. It has a human UI and an agent-friendly JSON / plain-text API, and
-nothing needs a login or a token.
-
-```
-dactyloscope/
-  cli.py          serve | check | whoami | report | firefox-profile
-  tls.py          ClientHello parser, JA3 / JA3n / JA4, shape comparison
-  h2fp.py         HTTP/2 preface parser → Akamai fingerprint
-  known.py        reference shapes (captures/*.json) + header expectations
-  analysis.py     findings engine (fail / warn / info, score, verdict)
-  compare.py      field-by-field report diff
-  server.py       asyncio TLS server (h2 + http/1.1) with raw-record capture
-  store.py        reports and baselines on disk
-  certs.py        self-signed CA + leaf, Firefox cert_override helper
-  webdriver.py    drive any W3C WebDriver browser and collect the report
-  static/         probe.js, worker.js, UI pages
-captures/         decoded ClientHello / HTTP/2 captures of real browsers
-tools/            the capture tools that produced them
-```
-
 ## Run it
 
 Requirements: Python 3.11+ and the `openssl` CLI.
