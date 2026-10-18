@@ -34,6 +34,9 @@ Environment variables and flags: `DACTYLOSCOPE_HOST`, `DACTYLOSCOPE_TLS_PORT`
 `DACTYLOSCOPE_CERTS`, `--captures DIR` (extra reference captures),
 `--san HOST` (extra certificate names), `--keep N`.
 
+On the Internet, run with `--public`: client IPs are not stored, and listing or
+deleting reports and writing baselines need `Authorization: Bearer $DACTYLOSCOPE_ADMIN_TOKEN`.
+
 On first start it mints a local CA and a leaf certificate under `data/certs/`.
 The CA is also served at `/ca.pem` on both ports.
 

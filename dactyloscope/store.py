@@ -16,7 +16,7 @@ from typing import Any
 
 
 def new_id() -> str:
-    return time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(3)
+    return time.strftime("%Y%m%d-%H%M%S") + "-" + secrets.token_hex(8)
 
 
 class Store:

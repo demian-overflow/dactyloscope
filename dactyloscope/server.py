@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import mimetypes
+import secrets
 import socket
 import ssl
 import struct
@@ -122,7 +123,12 @@ class Response:
 # ---------------------------------------------------------------------------
 
 class App:
-    def __init__(self, store: Store, known: KnownShapes, ca_pem: Path, public_urls: dict[str, str]) -> None:
+    def __init__(self, store: Store, known: KnownShapes, ca_pem: Path, public_urls: dict[str, str],
+                 public: bool = False, admin_token: str | None = None) -> None:
+        # public: an Internet-facing instance. Client IPs are not stored, other people's reports can't be
+        # listed or deleted, and baselines are read-only unless the request carries the admin token.
+        self.public = public
+        self.admin_token = admin_token
         self.store = store
         self.known = known
         self.ca_pem = ca_pem
@@ -137,6 +143,8 @@ class App:
             resp = Response.json({"error": "not found", "detail": str(e)}, 404)
         except ValueError as e:
             resp = Response.json({"error": "bad request", "detail": str(e)}, 400)
+        except PermissionError as e:
+            resp = Response.json({"error": "forbidden", "detail": str(e)}, 403)
         except Exception as e:  # noqa: BLE001
             log.exception("handler failed for %s %s", req.method, req.path)
             resp = Response.json({"error": "internal", "detail": f"{e.__class__.__name__}: {e}"}, 500)
@@ -163,7 +171,7 @@ class App:
         if p.startswith("/static/") and m == "GET":
             return self.static(p[len("/static/"):])
         if p == "/favicon.ico":
-            return Response(204, b"")
+            return self.static("favicon-32.png")
         if p == "/ca.pem":
             return Response(200, self.ca_pem.read_bytes(), "application/x-pem-file",
                             [("content-disposition", 'inline; filename="dactyloscope-ca.pem"')])
@@ -177,8 +185,10 @@ class App:
         if p == "/api/known" and m == "GET":
             return Response.json(self.known.as_json())
         if p == "/api/reports" and m == "GET":
+            self._require_admin(req)
             return Response.json({"reports": self.store.list(req.query.get("tag"), int(req.query.get("limit", "50")))})
         if p == "/api/report/latest" and m == "GET":
+            self._require_admin(req)
             return await self.latest(req)
         if p == "/api/report" and m == "POST":
             return self.create_report(req)
@@ -191,6 +201,13 @@ class App:
         if p == "/api/compare" and m == "GET":
             return self.compare(req)
         raise KeyError(p)
+
+    def _require_admin(self, req: Request) -> None:
+        if not self.public:
+            return
+        auth = req.header("authorization") or ""
+        if not (self.admin_token and secrets.compare_digest(auth, f"Bearer {self.admin_token}")):
+            raise PermissionError("disabled on the public instance; open your own report by its id")
 
     # ---- UI helpers ------------------------------------------------------
     def page(self, name: str) -> Response:
@@ -233,7 +250,7 @@ class App:
             "created_ts": time.time(),
             "done": False,
             "tag": req.query.get("tag"), "label": req.query.get("label"),
-            "client": {"ip": req.conn.peer_ip, "port": req.conn.peer_port},
+            "client": None if self.public else {"ip": req.conn.peer_ip, "port": req.conn.peer_port},
             "network": net,
             "probes": {},
             "probe_errors": {},
@@ -330,6 +347,7 @@ class App:
             fs = [f for f in (r.get("analysis") or {}).get("findings", []) if order.get(f["severity"], 0) >= order.get(mn, 0)]
             return Response.json({"id": rid, "score": r["analysis"].get("score"), "verdict": r["analysis"].get("verdict"), "findings": fs})
         if m == "DELETE" and not sub:
+            self._require_admin(req)
             return Response.json({"deleted": self.store.delete(rid)})
         if m == "POST" and sub == "section":
             name = parts[2] if len(parts) > 2 else ""
@@ -385,6 +403,8 @@ class App:
         return Response.json(r)
 
     def baseline_routes(self, req: Request, name: str) -> Response:
+        if req.method != "GET":
+            self._require_admin(req)
         if req.method == "POST":
             rid = req.query.get("report")
             if not rid:
@@ -413,7 +433,7 @@ class App:
     def _resolve(self, ref: str) -> dict[str, Any]:
         if ref.startswith("baseline:"):
             r = self.store.get_baseline(ref[len("baseline:"):])
-        elif ref == "latest":
+        elif ref == "latest" and not self.public:
             r = self.store.latest(None)
         else:
             r = self.store.get(ref)

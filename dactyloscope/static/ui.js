@@ -200,7 +200,7 @@
     var net = r.network || {}; var http = net.http || {};
     root.appendChild(h('h1', { text: r.label || ('Report ' + r.id) }));
     root.appendChild(h('p', { class: 'lede' }, [
-      (r.created || '') + (r.tag ? ', tag ' : ''), r.tag ? h('code', { text: r.tag }) : null, ' from ' + ((r.client || {}).ip || '?') + ' over ' + (net.scheme || 'http') + ' (HTTP/' + (net.http_version || '1.1') + ')' + (r.probe_ms ? ', probes took ' + Math.round(r.probe_ms / 100) / 10 + ' s' : '') + (r.done ? '' : ' — probes still running'),
+      (r.created || '') + (r.tag ? ', tag ' : ''), r.tag ? h('code', { text: r.tag }) : null, (r.client ? ' from ' + r.client.ip : '') + ' over ' + (net.scheme || 'http') + ' (HTTP/' + (net.http_version || '1.1') + ')' + (r.probe_ms ? ', probes took ' + Math.round(r.probe_ms / 100) / 10 + ' s' : '') + (r.done ? '' : ' — probes still running'),
       h('br'), h('span', { class: 'mono small', text: http.user_agent || '(no User-Agent)' })
     ]));
     root.appendChild(renderVerdict(r));
@@ -259,7 +259,7 @@
 
   L.topbar = function (active) {
     var nav = h('nav', null, [['/', 'Inspect me'], ['/reports', 'Reports'], ['/compare', 'Compare'], ['/docs', 'API']].map(function (p) { return h('a', { href: p[0], class: p[1] === active ? 'active' : '', text: p[1] }); }));
-    return h('div', { class: 'top' }, [h('a', { class: 'brand', href: '/', html: 'Dactyloscope' }), nav]);
+    return h('div', { class: 'top' }, [h('a', { class: 'brand', href: '/', html: '<img src="/static/logo.svg" alt="">Dactyloscope' }), nav]);
   };
   L.getJSON = function (url) { return fetch(url, { headers: { accept: 'application/json' } }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error + (j.detail ? ': ' + j.detail : '')); return j; }); }); };
 })();

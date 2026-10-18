@@ -42,7 +42,7 @@ def cmd_serve(a: argparse.Namespace) -> int:
     host_for_url = "127.0.0.1" if a.host in ("0.0.0.0", "::", "") else a.host
     urls = {"https": f"https://{host_for_url}:{a.tls_port}", "http": f"http://{host_for_url}:{a.plain_port}" if a.plain_port else None,
             "ca_pem": str(ca_pem)}
-    app = server.App(store, known, ca_pem, urls)
+    app = server.App(store, known, ca_pem, urls, public=a.public, admin_token=os.environ.get("DACTYLOSCOPE_ADMIN_TOKEN"))
     ctx = server.make_ssl_context(pem, key)
     log.info("Dactyloscope %s — probe page %s/  plain %s  CA %s", __version__, urls["https"], urls["http"], ca_pem)
     log.info("trust hint for BoringSSL/OpenSSL clients: SSL_CERT_FILE=%s", ca_pem)
@@ -122,6 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--captures", action="append", help="directory with captures/-style reference captures (repeatable)")
     s.add_argument("--san", action="append", help="extra hostname/IP for the certificate (repeatable)")
     s.add_argument("--keep", type=int, default=500, help="reports to keep on disk")
+    s.add_argument("--public", action="store_true", default=os.environ.get("DACTYLOSCOPE_PUBLIC") == "1",
+                   help="Internet-facing mode: no client IPs stored, listing/deleting/baseline writes need DACTYLOSCOPE_ADMIN_TOKEN")
     s.add_argument("-v", "--verbose", action="store_true")
     s.set_defaults(fn=cmd_serve)
 
