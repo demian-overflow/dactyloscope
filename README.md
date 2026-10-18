@@ -1,3 +1,5 @@
+<p align="center"><img src="brand/logo.svg" width="160" alt=""></p>
+
 # Dactyloscope
 
 *Dactyloscopy: the forensic science of fingerprint identification.*
