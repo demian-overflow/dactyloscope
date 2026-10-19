@@ -176,7 +176,7 @@ def _parse_ext(ch: ClientHello, et: int, b: bytes) -> None:
         while q + 3 <= len(b):
             ntype = b[q]; nlen = struct.unpack("!H", b[q + 1:q + 3])[0]
             if ntype == 0:
-                ch.sni = b[q + 3:q + 3 + nlen].decode("idna", "replace")
+                ch.sni = b[q + 3:q + 3 + nlen].decode("ascii", "replace")
             q += 3 + nlen
     elif et == 10:
         n = struct.unpack("!H", b[:2])[0]; ch.groups = _u16_list(b, 2, n)
