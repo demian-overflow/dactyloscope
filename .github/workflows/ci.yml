@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the supported floor; 3.12 matches the Docker image.
+        python: ["3.11", "3.12"]
+    steps:
+      # The `deploy` submodule is private and not needed here, so it is not fetched.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile all sources
+        run: python -m compileall -q dactyloscope tools brand
+
+      - name: Import every module
+        run: |
+          python - <<'EOF'
+          import importlib, pkgutil
+          import dactyloscope
+          for m in pkgutil.iter_modules(dactyloscope.__path__):
+              importlib.import_module(f"dactyloscope.{m.name}")
+              print("ok", m.name)
+          EOF
+          python -m dactyloscope --version
+
+      - name: Run tests
+        run: |
+          if [ -n "$(find . -path ./.git -prune -o \( -name 'test_*.py' -o -name '*_test.py' \) -print -quit)" ]; then
+            pip install pytest
+            pytest -q
+          else
+            echo "No tests found, skipping pytest."
+          fi
+
+      - name: Smoke test the server
+        run: |
+          certs="$(mktemp -d)"
+          python -m dactyloscope serve --host 127.0.0.1 --certs "$certs" > server.log 2>&1 &
+          pid=$!
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then ok=1; break; fi
+            sleep 1
+          done
+          kill "$pid" || true
+          cat server.log
+          test "${ok:-}" = 1
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: dactyloscope:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Wait for container to report healthy
+        run: |
+          docker run -d --name dactyloscope-ci dactyloscope:ci
+          for _ in $(seq 1 30); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' dactyloscope-ci)"
+            echo "health: $status"
+            if [ "$status" = healthy ]; then break; fi
+            sleep 2
+          done
+          docker logs dactyloscope-ci
+          test "$status" = healthy
