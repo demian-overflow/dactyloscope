@@ -46,6 +46,8 @@ jobs:
           import importlib, pkgutil
           import dactyloscope
           for m in pkgutil.iter_modules(dactyloscope.__path__):
+              if m.name == "__main__":  # runs the CLI on import
+                  continue
               importlib.import_module(f"dactyloscope.{m.name}")
               print("ok", m.name)
           EOF
