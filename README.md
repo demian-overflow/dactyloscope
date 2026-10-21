@@ -4,6 +4,9 @@
 
 *Dactyloscopy: the forensic science of fingerprint identification.*
 
+**Try it live: <https://dactyloscope.noogoo.ch>**. Open it in the browser you
+want to inspect. Nothing is stored.
+
 Dactyloscope is a self-hosted browser fingerprint inspection service. Point any
 browser at it (Chrome, Firefox, a headless build, an automation framework, an
 antidetect browser) and it tells you what a bot-detection or anti-fraud vendor
