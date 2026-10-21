@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -62,43 +61,39 @@ class WebDriver:
             self.sid = None
 
 
-def server_get(url: str, timeout: float = 90, text: bool = False) -> Any:
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    req = urllib.request.Request(url, headers={"accept": "text/plain" if text else "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-        body = r.read()
-        return body.decode() if text else json.loads(body)
+_READ_PAGE = """return {report: window.__DACTY_REPORT__ || null, seed: window.__DACTY_SEED__ || null,
+               probes: window.__DACTY_RESULTS__ || null};"""
 
 
-def run_probe(webdriver_url: str, server_url: str, tag: str, wait: float = 120, capabilities: dict[str, Any] | None = None,
-              keep_session: bool = False) -> dict[str, Any]:
-    """Open the probe page in the browser behind ``webdriver_url`` and return the finished report."""
+def run_probe(webdriver_url: str, server_url: str, label: str | None = None, wait: float = 120,
+              capabilities: dict[str, Any] | None = None, keep_session: bool = False) -> dict[str, Any]:
+    """Open the probe page in the browser behind ``webdriver_url`` and return the report the page ends up holding.
+
+    The server keeps nothing, so the report is read out of the page itself. If the probes don't finish within
+    ``wait`` seconds, the sections that did finish are analysed locally and returned with ``done: false``.
+    """
     wd = WebDriver(webdriver_url)
     wd.wait_ready()
     wd.new_session(capabilities)
     started = time.time()
     try:
-        before = None
-        try:
-            before = server_get(f"{server_url}/api/report/latest?tag={urllib.parse.quote(tag)}", timeout=10).get("id")
-        except Exception:  # noqa: BLE001 - no previous report is fine
-            pass
-        wd.navigate(f"{server_url}/?tag={urllib.parse.quote(tag)}&noredirect=1")
-        q = f"tag={urllib.parse.quote(tag)}&wait={int(wait)}" + (f"&after={before}" if before else "")
-        try:
-            report = server_get(f"{server_url}/api/report/latest?{q}", timeout=wait + 15)
-        except urllib.error.HTTPError as e:
-            if e.code != 404:
-                raise
-            # Nothing finished in time: return the newest (unfinished) report for
-            # this tag so the caller can see which sections did arrive.
-            lst = server_get(f"{server_url}/api/reports?tag={urllib.parse.quote(tag)}", timeout=10).get("reports") or []
-            fresh = [x for x in lst if x.get("id") != before and x.get("created_ts", 0) >= started - 5]
-            if not fresh:
-                raise RuntimeError(f"no report with tag {tag!r} was created; did the browser reach {server_url}?") from e
-            report = server_get(f"{server_url}/api/report/{fresh[0]['id']}", timeout=10)
+        wd.navigate(f"{server_url}/" + (f"?label={urllib.parse.quote(label)}" if label else ""))
+        page: dict[str, Any] = {}
+        while time.time() - started < wait:
+            page = wd.execute(_READ_PAGE) or {}
+            if isinstance(page, dict) and page.get("report"):
+                break
+            time.sleep(1)
+        report = page.get("report") if isinstance(page, dict) else None
+        if not report or not report.get("analysis"):
+            seed = (page or {}).get("seed") if isinstance(page, dict) else None
+            if not seed:
+                raise RuntimeError(f"the probe page never loaded; did the browser reach {server_url}?")
+            from .analysis import analyse
+            from .known import KnownShapes
+            probes = page.get("probes") or {}
+            report = dict(seed, done=False, probes=probes,
+                          analysis=analyse(probes, seed["network"], KnownShapes().load()))
         report["_probe_wall_s"] = round(time.time() - started, 1)
         return report
     finally:

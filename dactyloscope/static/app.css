@@ -119,15 +119,4 @@ table.list td.mono { font-size: 12.5px; }
 .probe li.done .st { color: var(--teal); } .probe li.error .st, .probe li.post-failed .st { color: var(--red); } .probe li.running .st { color: var(--amber); }
 .probe li .ms { margin-left: auto; color: var(--muted); }
 
-/* diff */
-table.diff td.path { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
-table.diff td.val { font-family: var(--mono); font-size: 12.5px; max-width: 380px; word-break: break-word; }
-table.diff td.val.a { background: #fff7f6; } table.diff td.val.b { background: #f2fbfa; }
-
-/* docs */
-.docs h2 { margin-top: 36px; }
-.docs pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow: auto; font-size: 13px; }
-.docs table { width: 100%; border-collapse: collapse; background: var(--sheet); border: 1px solid var(--rule); font-size: 14px; }
-.docs td, .docs th { padding: 7px 12px; border-bottom: 1px solid var(--rule-2); text-align: left; vertical-align: top; }
-.docs td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) { .meter .needle { transition: left .6s cubic-bezier(.2,.8,.2,1); } }

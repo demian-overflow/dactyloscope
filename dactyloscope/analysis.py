@@ -721,7 +721,7 @@ def _js_checks(f: Findings, p: dict[str, Any], net: dict[str, Any], ua: dict[str
 
 
 # ---------------------------------------------------------------------------
-# Plain-text summary (for agents, `Accept: text/plain`)
+# Plain-text summary (for agents and the `check` command)
 # ---------------------------------------------------------------------------
 
 def text_summary(r: dict[str, Any]) -> str:
@@ -733,7 +733,7 @@ def text_summary(r: dict[str, Any]) -> str:
     idn = a.get("identity") or {}
     cl = idn.get("claimed") or {}
     lines = [
-        f"Dactyloscope report {r.get('id', '(whoami)')}" + (f"  tag={r['tag']}" if r.get("tag") else ""),
+        "Dactyloscope report" + (f" {r['created']}" if r.get("created") else "") + (f"  label={r['label']}" if r.get("label") else ""),
         f"verdict: {a.get('verdict')}  score: {a.get('score')}/100  (fail {a.get('counts', {}).get('fail', 0)}, warn {a.get('counts', {}).get('warn', 0)}, info {a.get('counts', {}).get('info', 0)})"
         + ("" if r.get("done", True) else "  [JS probes not finished]"),
         f"claimed: {cl.get('family')} {cl.get('major') or ''} on {cl.get('os')}  | js engine: {idn.get('js_engine') or '?'}  | tls: {idn.get('tls_family') or 'unknown'}  | h2: {idn.get('h2_family') or 'unknown'}  | headers: {idn.get('http_family') or 'differs'}",

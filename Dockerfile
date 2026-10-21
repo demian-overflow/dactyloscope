@@ -14,11 +14,11 @@ COPY dactyloscope ./dactyloscope
 # Reference ClientHello / HTTP-2 captures the analysis compares against.
 COPY captures ./captures
 
-ENV DACTYLOSCOPE_DATA=/app/data \
-    DACTYLOSCOPE_CERTS=/app/data/certs \
+ENV DACTYLOSCOPE_CERTS=/app/data/certs \
     DACTYLOSCOPE_HOST=0.0.0.0 \
     DACTYLOSCOPE_TLS_PORT=8443 \
     DACTYLOSCOPE_PLAIN_PORT=8080
+# Only the self-signed CA and leaf certificate live here; reports are never stored.
 VOLUME ["/app/data"]
 EXPOSE 8443 8080
 

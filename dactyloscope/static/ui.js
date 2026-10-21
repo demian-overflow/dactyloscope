@@ -1,4 +1,4 @@
-/* Dactyloscope — report renderer shared by /r/<id>, /reports and /compare. */
+/* Dactyloscope — report renderer, used by the probe page once the analysis is back. */
 (function () {
   'use strict';
   var L = window.Dacty = {};
@@ -198,21 +198,22 @@
   L.renderReport = function (root, r) {
     root.innerHTML = '';
     var net = r.network || {}; var http = net.http || {};
-    root.appendChild(h('h1', { text: r.label || ('Report ' + r.id) }));
+    root.appendChild(h('h1', { text: r.label || 'Report' }));
     root.appendChild(h('p', { class: 'lede' }, [
-      (r.created || '') + (r.tag ? ', tag ' : ''), r.tag ? h('code', { text: r.tag }) : null, (r.client ? ' from ' + r.client.ip : '') + ' over ' + (net.scheme || 'http') + ' (HTTP/' + (net.http_version || '1.1') + ')' + (r.probe_ms ? ', probes took ' + Math.round(r.probe_ms / 100) / 10 + ' s' : '') + (r.done ? '' : ' — probes still running'),
+      (r.created || '') + (r.client ? ' from ' + r.client.ip : '') + ' over ' + (net.scheme || 'http') + ' (HTTP/' + (net.http_version || '1.1') + ')' + (r.probe_ms ? ', probes took ' + Math.round(r.probe_ms / 100) / 10 + ' s' : ''),
       h('br'), h('span', { class: 'mono small', text: http.user_agent || '(no User-Agent)' })
     ]));
     root.appendChild(renderVerdict(r));
     root.appendChild(renderLedger(r));
     var id = (r.analysis || {}).identity || {};
     if (id.js_engine_evidence && id.js_engine_evidence.length) root.appendChild(h('p', { class: 'small muted', text: 'Engine evidence: ' + id.js_engine_evidence.join('; ') }));
+    // The server keeps nothing, so the download is the only copy of this report.
+    var url = URL.createObjectURL(new Blob([JSON.stringify(r, null, 1)], { type: 'application/json' }));
+    var stamp = (r.created || '').replace(/[^0-9]/g, '').slice(0, 14);
     var bar = h('div', { class: 'bar' }, [
-      h('a', { class: 'btn', href: '/api/report/' + r.id, text: 'JSON' }), h('a', { class: 'btn', href: '/api/report/' + r.id + '/summary', text: 'Text summary' }),
-      h('a', { class: 'btn', href: '/compare?a=' + r.id, text: 'Compare with…' }),
-      h('button', { text: 'Save as baseline', onclick: '' })
+      h('a', { class: 'btn', href: url, download: 'dactyloscope-' + (stamp || 'report') + '.json', text: 'Download JSON' }),
+      h('a', { class: 'btn', href: '/', text: 'Run again' })
     ]);
-    bar.lastChild.addEventListener('click', function () { var n = prompt('Baseline name (letters, digits, - _ .):', 'chrome-real'); if (!n) return; fetch('/api/baseline/' + encodeURIComponent(n) + '?report=' + r.id, { method: 'POST' }).then(function (x) { return x.json(); }).then(function (j) { alert(j.ok ? 'Saved baseline ' + n : JSON.stringify(j)); }); });
     root.appendChild(bar);
     root.appendChild(h('h2', null, ['Findings', h('small', { text: 'what a detector would notice' })]));
     root.appendChild(renderFindings(r));
@@ -243,23 +244,7 @@
     root.appendChild(section('Full report', Math.round(pre.textContent.length / 1024) + ' KB', pre));
   };
 
-  L.renderDiff = function (root, d) {
-    root.innerHTML = '';
-    root.appendChild(h('h1', { text: 'Compare' }));
-    root.appendChild(h('p', { class: 'lede' }, [h('b', { text: 'A ' }), d.a.ref + ' — ' + (d.a.ua || '') + ' (' + d.a.verdict + ' ' + d.a.score + ')', h('br'), h('b', { text: 'B ' }), d.b.ref + ' — ' + (d.b.ua || '') + ' (' + d.b.verdict + ' ' + d.b.score + ')']));
-    root.appendChild(kv({ 'differing fields': d.count, 'by section': Object.keys(d.by_section).map(function (k) { return k + ' ' + d.by_section[k]; }).join(', '), 'findings only in A': d.findings_only_in_a, 'findings only in B': d.findings_only_in_b }));
-    var t = h('table', { class: 'list diff' }); t.appendChild(h('tr', null, [h('th', { text: 'field' }), h('th', { text: 'A' }), h('th', { text: 'B' })]));
-    d.differences.forEach(function (x) {
-      var a = x.kind === 'list' && x.order_only ? '(same set, different order) ' + fmt(x.a) : x.kind === 'list' && (x.only_a || x.only_b) ? 'only here: ' + fmt(x.only_a) : fmt(x.a);
-      var b = x.kind === 'list' && x.order_only ? fmt(x.b) : x.kind === 'list' && (x.only_a || x.only_b) ? 'only here: ' + fmt(x.only_b) : fmt(x.b);
-      t.appendChild(h('tr', null, [h('td', { class: 'path', text: x.path }), h('td', { class: 'val a', text: a }), h('td', { class: 'val b', text: b })]));
-    });
-    root.appendChild(t);
+  L.topbar = function () {
+    return h('div', { class: 'top' }, [h('a', { class: 'brand', href: '/', html: '<img src="/static/logo.svg" alt="">Dactyloscope' })]);
   };
-
-  L.topbar = function (active) {
-    var nav = h('nav', null, [['/', 'Inspect me'], ['/reports', 'Reports'], ['/compare', 'Compare'], ['/docs', 'API']].map(function (p) { return h('a', { href: p[0], class: p[1] === active ? 'active' : '', text: p[1] }); }));
-    return h('div', { class: 'top' }, [h('a', { class: 'brand', href: '/', html: '<img src="/static/logo.svg" alt="">Dactyloscope' }), nav]);
-  };
-  L.getJSON = function (url) { return fetch(url, { headers: { accept: 'application/json' } }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error + (j.detail ? ': ' + j.detail : '')); return j; }); }); };
 })();

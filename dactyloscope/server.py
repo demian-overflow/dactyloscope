@@ -32,9 +32,8 @@ import h2.events
 import h2.exceptions
 import h2.settings
 
-from . import __version__, analysis, compare, h2fp, tls
+from . import __version__, analysis, h2fp, tls
 from .known import KnownShapes
-from .store import Store, new_id, summary_of
 
 log = logging.getLogger("dactyloscope")
 
@@ -42,17 +41,13 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 MAX_BODY = 8 * 1024 * 1024
 PEEK_LIMIT = 64 * 1024
 
-# Header values a subsequent detector could not see anyway; not stored.
-STRIP_REQUEST_HEADERS: set[str] = set()
-
-
 # ---------------------------------------------------------------------------
 # Connection record
 # ---------------------------------------------------------------------------
 
 class ConnInfo:
     def __init__(self, peer: tuple, scheme: str) -> None:
-        self.id = new_id()
+        self.id = secrets.token_hex(6)
         self.peer_ip, self.peer_port = (peer[0], peer[1]) if peer else ("?", 0)
         self.scheme = scheme
         self.created = time.time()
@@ -123,18 +118,18 @@ class Response:
 # ---------------------------------------------------------------------------
 
 class App:
-    def __init__(self, store: Store, known: KnownShapes, ca_pem: Path, public_urls: dict[str, str],
-                 public: bool = False, admin_token: str | None = None) -> None:
-        # public: an Internet-facing instance. Client IPs are not stored, other people's reports can't be
-        # listed or deleted, and baselines are read-only unless the request carries the admin token.
+    """Stateless: nothing about a visitor outlives the request that carries it.
+
+    ``GET /`` captures the network layer of the navigation request and embeds it in the probe page. The page runs
+    the JS probes and posts everything back to ``POST /analyze`` in one request, which returns the finished report.
+    """
+
+    def __init__(self, known: KnownShapes, ca_pem: Path, public: bool = False) -> None:
+        # public: an Internet-facing instance; the client IP is left out of the report.
         self.public = public
-        self.admin_token = admin_token
-        self.store = store
         self.known = known
         self.ca_pem = ca_pem
-        self.public_urls = public_urls
         self.started = time.time()
-        self._static_cache: dict[str, tuple[bytes, str]] = {}
 
     async def handle(self, req: Request) -> Response:
         try:
@@ -143,31 +138,18 @@ class App:
             resp = Response.json({"error": "not found", "detail": str(e)}, 404)
         except ValueError as e:
             resp = Response.json({"error": "bad request", "detail": str(e)}, 400)
-        except PermissionError as e:
-            resp = Response.json({"error": "forbidden", "detail": str(e)}, 403)
         except Exception as e:  # noqa: BLE001
             log.exception("handler failed for %s %s", req.method, req.path)
             resp = Response.json({"error": "internal", "detail": f"{e.__class__.__name__}: {e}"}, 500)
-        resp.headers += [("cache-control", "no-store"), ("access-control-allow-origin", "*"),
-                         ("x-dactyloscope-connection", req.conn.id), ("server", f"dactyloscope/{__version__}")]
+        resp.headers += [("cache-control", "no-store"), ("server", f"dactyloscope/{__version__}")]
         return resp
 
-    async def _route(self, req: Request) -> Response:  # noqa: C901 - flat dispatch table
+    async def _route(self, req: Request) -> Response:
         p, m = req.path, req.method
-        if m == "OPTIONS":
-            return Response(204, b"", headers=[("access-control-allow-methods", "GET,POST,DELETE,OPTIONS"),
-                                                ("access-control-allow-headers", "content-type")])
-        # --- UI ------------------------------------------------------------
         if p == "/" and m == "GET":
             return self.probe_page(req)
-        if p.startswith("/r/") and m == "GET":
-            return self.page("report.html")
-        if p in ("/reports", "/reports/") and m == "GET":
-            return self.page("reports.html")
-        if p == "/compare" and m == "GET":
-            return self.page("compare.html")
-        if p == "/docs" and m == "GET":
-            return self.page("docs.html")
+        if p == "/analyze" and m == "POST":
+            return self.analyze(req)
         if p.startswith("/static/") and m == "GET":
             return self.static(p[len("/static/"):])
         if p == "/favicon.ico":
@@ -177,43 +159,9 @@ class App:
                             [("content-disposition", 'inline; filename="dactyloscope-ca.pem"')])
         if p == "/healthz":
             return Response.json({"ok": True, "version": __version__, "uptime_s": round(time.time() - self.started)})
-        # --- API -----------------------------------------------------------
-        if p in ("/api", "/api/"):
-            return Response.json(self.api_index())
-        if p == "/api/whoami" and m == "GET":
-            return self.whoami(req)
-        if p == "/api/known" and m == "GET":
-            return Response.json(self.known.as_json())
-        if p == "/api/reports" and m == "GET":
-            self._require_admin(req)
-            return Response.json({"reports": self.store.list(req.query.get("tag"), int(req.query.get("limit", "50")))})
-        if p == "/api/report/latest" and m == "GET":
-            self._require_admin(req)
-            return await self.latest(req)
-        if p == "/api/report" and m == "POST":
-            return self.create_report(req)
-        if p.startswith("/api/report/"):
-            return await self.report_routes(req, p[len("/api/report/"):])
-        if p == "/api/baselines" and m == "GET":
-            return Response.json({"baselines": self.store.list_baselines()})
-        if p.startswith("/api/baseline/"):
-            return self.baseline_routes(req, p[len("/api/baseline/"):])
-        if p == "/api/compare" and m == "GET":
-            return self.compare(req)
         raise KeyError(p)
 
-    def _require_admin(self, req: Request) -> None:
-        if not self.public:
-            return
-        auth = req.header("authorization") or ""
-        if not (self.admin_token and secrets.compare_digest(auth, f"Bearer {self.admin_token}")):
-            raise PermissionError("disabled on the public instance; open your own report by its id")
-
     # ---- UI helpers ------------------------------------------------------
-    def page(self, name: str) -> Response:
-        body, ctype = self._read_static(name)
-        return Response(200, body, ctype)
-
     def static(self, name: str) -> Response:
         if ".." in name or name.startswith("/"):
             raise KeyError(name)
@@ -230,221 +178,53 @@ class App:
         return p.read_bytes(), ctype
 
     def probe_page(self, req: Request) -> Response:
-        """Serve the probe page; the navigation request itself becomes the network part of a new report."""
-        rid = new_id()
-        report = self._new_report(rid, req)
-        self.store.put(report)
-        self.store.prune()
-        html = self._read_static("index.html")[0].decode()
-        html = html.replace("__REPORT_ID__", rid).replace("__DACTY_VERSION__", __version__)
-        return Response(200, html, "text/html; charset=utf-8")
-
-    def _new_report(self, rid: str, req: Request) -> dict[str, Any]:
+        """Serve the probe page with the navigation request's network fingerprint embedded in it."""
         net = req.conn.network_json(self.known)
         net["http"] = req.http_json()
         net["http"]["match"] = analysis.match_http(req, net)
         net["requests"] = []
-        report = {
-            "id": rid, "dactyloscope_version": __version__,
+        seed = {
+            "dactyloscope_version": __version__,
             "created": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "created_ts": time.time(),
-            "done": False,
-            "tag": req.query.get("tag"), "label": req.query.get("label"),
+            "label": req.query.get("label"),
             "client": None if self.public else {"ip": req.conn.peer_ip, "port": req.conn.peer_port},
             "network": net,
-            "probes": {},
-            "probe_errors": {},
-            "analysis": analysis.analyse(None, net, self.known),
         }
-        return report
+        # "<" escaped so header values can't close the <script> element.
+        blob = json.dumps(seed, default=str).replace("<", "\\u003c")
+        html = self._read_static("index.html")[0].decode()
+        html = html.replace("__DACTY_VERSION__", __version__).replace("__SEED_JSON__", blob)
+        return Response(200, html, "text/html; charset=utf-8")
 
-    # ---- API ----------------------------------------------------------
-    def api_index(self) -> dict[str, Any]:
-        return {
-            "service": "dactyloscope", "version": __version__,
-            "urls": self.public_urls,
-            "endpoints": {
-                "GET /": "probe page; opening it in a browser creates a report and runs the JS probes",
-                "GET /?tag=<tag>&label=<text>": "same, with a tag for later lookup",
-                "GET /api/whoami": "network-only fingerprint of *this* connection (TLS, HTTP/2, headers) with findings",
-                "GET /api/report/latest?tag=<tag>&wait=<s>": "newest finished report (optionally for a tag), long-polls up to wait seconds",
-                "GET /api/report/<id>?wait=<s>": "one report as JSON (long-polls until the JS probes finished)",
-                "GET /api/report/<id>/summary": "concise plain-text summary (Accept: text/plain on the JSON URL does the same)",
-                "GET /api/report/<id>/findings?min=info|warn|fail": "just the findings",
-                "DELETE /api/report/<id>": "remove a report",
-                "GET /api/reports?tag=<tag>&limit=<n>": "list reports (summaries)",
-                "GET /api/compare?a=<id|baseline:name>&b=<id|baseline:name>": "field-by-field diff of two reports",
-                "GET /api/baselines": "list saved baselines",
-                "POST /api/baseline/<name>?report=<id>": "save a report as a named baseline (a real browser's report, typically)",
-                "DELETE /api/baseline/<name>": "delete a baseline",
-                "GET /api/known": "reference TLS / HTTP/2 / header shapes the analysis compares against",
-                "GET /ca.pem": "the local CA to trust for the TLS port (BoringSSL/OpenSSL clients: SSL_CERT_FILE=ca.pem)",
-                "GET /healthz": "liveness",
-                "GET /r/<id>": "report viewer (HTML)",
-                "GET /reports": "report list (HTML)",
-                "GET /compare?a=&b=": "diff viewer (HTML)",
-                "GET /docs": "this documentation as HTML",
-            },
-            "report_schema": {
-                "id": "string", "created": "ISO 8601", "done": "bool — JS probes finished", "tag": "string|null",
-                "client": {"ip": "string", "port": "int"},
-                "network": {"tls": "ClientHello decode, ja3, ja4, negotiated, match", "h2": "Akamai fingerprint, frames, match",
-                            "http": "navigation request headers in wire order + match", "requests": "subresource requests seen for this report"},
-                "probes": "JS probe sections keyed by name (navigator, screen, canvas, webgl, audio, fonts, engine, apis, automation, integrity, worker, iframe, ...)",
-                "analysis": {"score": "0-100 (higher = more automated/spoofed)", "verdict": "clean|suspicious|automated",
-                             "identity": "claimed vs detected browser family, OS, JS engine", "findings": "[{id, severity, category, message, evidence}]",
-                             "counts": {"fail": "int", "warn": "int", "info": "int"}},
-            },
+    def analyze(self, req: Request) -> Response:
+        """Turn the page's seed plus its probe results into a finished report. Nothing is kept."""
+        try:
+            data = json.loads(req.body.decode("utf-8") or "{}")
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise ValueError(f"invalid JSON: {e}") from e
+        if not isinstance(data, dict) or not isinstance(data.get("network"), dict):
+            raise ValueError("expected {network, probes, probe_errors}")
+        probes = data.get("probes") if isinstance(data.get("probes"), dict) else {}
+        errors = data.get("probe_errors") if isinstance(data.get("probe_errors"), dict) else {}
+        net = data["network"]
+        if not isinstance(net.get("requests"), list):
+            net["requests"] = []
+        net["requests"].append(self._subrequest(req))
+        report = {
+            "dactyloscope_version": __version__,
+            "created": data.get("created"), "label": data.get("label"), "client": data.get("client"),
+            "done": True,
+            "network": net, "probes": probes, "probe_errors": errors,
+            "probe_ms": data.get("elapsed_ms"), "probe_order": data.get("order"),
+            "analysis": analysis.analyse(probes, net, self.known, errors),
         }
-
-    def whoami(self, req: Request) -> Response:
-        net = req.conn.network_json(self.known)
-        net["http"] = req.http_json()
-        net["http"]["match"] = analysis.match_http(req, net)
-        out = {"client": {"ip": req.conn.peer_ip, "port": req.conn.peer_port}, "network": net,
-               "analysis": analysis.analyse(None, net, self.known)}
-        if _wants_text(req):
-            return Response(200, analysis.text_summary(out))
-        return Response.json(out)
-
-    def create_report(self, req: Request) -> Response:
-        """Agent-driven flow without a page load: create a report from this connection (network only)."""
-        rid = new_id()
-        report = self._new_report(rid, req)
-        self.store.put(report)
-        return Response.json({"id": rid, "report": report})
-
-    async def latest(self, req: Request) -> Response:
-        wait = float(req.query.get("wait", "0") or 0)
-        tag = req.query.get("tag")
-        r = await self.store.wait_latest(tag, min(wait, 600), req.query.get("after")) if wait else self.store.latest(tag)
-        if not r:
-            return Response.json({"error": "no report" + (f" with tag {tag!r}" if tag else "")}, 404)
-        return self._report_response(req, r)
-
-    async def report_routes(self, req: Request, rest: str) -> Response:
-        parts = rest.split("/")
-        rid = parts[0]
-        sub = parts[1] if len(parts) > 1 else ""
-        m = req.method
-        if m == "GET" and not sub:
-            wait = float(req.query.get("wait", "0") or 0)
-            r = await self.store.wait_done(rid, min(wait, 600)) if wait else self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            return self._report_response(req, r)
-        if m == "GET" and sub == "summary":
-            r = self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            return Response(200, analysis.text_summary(r))
-        if m == "GET" and sub == "findings":
-            r = self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            mn = req.query.get("min", "info")
-            order = {"info": 0, "warn": 1, "fail": 2}
-            fs = [f for f in (r.get("analysis") or {}).get("findings", []) if order.get(f["severity"], 0) >= order.get(mn, 0)]
-            return Response.json({"id": rid, "score": r["analysis"].get("score"), "verdict": r["analysis"].get("verdict"), "findings": fs})
-        if m == "DELETE" and not sub:
-            self._require_admin(req)
-            return Response.json({"deleted": self.store.delete(rid)})
-        if m == "POST" and sub == "section":
-            name = parts[2] if len(parts) > 2 else ""
-            if not name or not name.replace("_", "").isalnum():
-                raise ValueError("bad section name")
-            r = self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            try:
-                data = json.loads(req.body.decode("utf-8") or "{}")
-            except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                raise ValueError(f"invalid JSON: {e}") from e
-            if isinstance(data, dict) and "__error__" in data:
-                r.setdefault("probe_errors", {})[name] = data["__error__"]
-            else:
-                r.setdefault("probes", {})[name] = data
-            r["network"]["requests"].append(self._subrequest(req))
-            r["analysis"] = analysis.analyse(r.get("probes"), r["network"], self.known, r.get("probe_errors"))
-            self.store.put(r)
-            return Response.json({"ok": True, "section": name})
-        if m == "POST" and sub == "done":
-            r = self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            try:
-                data = json.loads(req.body.decode("utf-8") or "{}")
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                data = {}
-            r["probe_ms"] = data.get("elapsed_ms")
-            r["probe_order"] = data.get("order")
-            r["analysis"] = analysis.analyse(r.get("probes"), r["network"], self.known, r.get("probe_errors"))
-            r["done"] = True
-            self.store.put(r)
-            return Response.json({"ok": True, "id": rid, "score": r["analysis"]["score"], "verdict": r["analysis"]["verdict"]})
-        if m == "POST" and sub == "asset":
-            # Subresource requests (script/style/fetch) announce themselves so their header sets are kept.
-            r = self.store.get(rid)
-            if r:
-                r["network"]["requests"].append(self._subrequest(req))
-                self.store.put(r)
-            return Response.json({"ok": True})
-        raise KeyError(rest)
+        return Response.json(report)
 
     def _subrequest(self, req: Request) -> dict[str, Any]:
         return {"method": req.method, "path": req.path, "version": req.version,
                 "connection_id": req.conn.id, "http_version": req.conn.http_version,
                 "headers": [[k, v] for k, v in req.headers],
                 "ja3": (req.conn.tls or {}).get("ja3", {}).get("hash") if req.conn.tls else None}
-
-    def _report_response(self, req: Request, r: dict[str, Any]) -> Response:
-        if _wants_text(req):
-            return Response(200, analysis.text_summary(r))
-        return Response.json(r)
-
-    def baseline_routes(self, req: Request, name: str) -> Response:
-        if req.method != "GET":
-            self._require_admin(req)
-        if req.method == "POST":
-            rid = req.query.get("report")
-            if not rid:
-                raise ValueError("missing ?report=<id>")
-            r = self.store.get(rid)
-            if not r:
-                raise KeyError(rid)
-            self.store.put_baseline(name, r)
-            return Response.json({"ok": True, "baseline": name, "report": rid})
-        if req.method == "GET":
-            b = self.store.get_baseline(name)
-            if not b:
-                raise KeyError(name)
-            return Response.json(b)
-        if req.method == "DELETE":
-            return Response.json({"deleted": self.store.delete_baseline(name)})
-        raise KeyError(name)
-
-    def compare(self, req: Request) -> Response:
-        a, b = req.query.get("a"), req.query.get("b")
-        if not a or not b:
-            raise ValueError("need ?a=<id|baseline:name>&b=<id|baseline:name>")
-        ra, rb = self._resolve(a), self._resolve(b)
-        return Response.json(compare.diff_reports(ra, rb, a, b))
-
-    def _resolve(self, ref: str) -> dict[str, Any]:
-        if ref.startswith("baseline:"):
-            r = self.store.get_baseline(ref[len("baseline:"):])
-        elif ref == "latest" and not self.public:
-            r = self.store.latest(None)
-        else:
-            r = self.store.get(ref)
-        if not r:
-            raise KeyError(ref)
-        return r
-
-
-def _wants_text(req: Request) -> bool:
-    acc = (req.header("accept") or "").lower()
-    return req.query.get("format") == "text" or (acc.startswith("text/plain") and "json" not in acc)
 
 
 # ---------------------------------------------------------------------------

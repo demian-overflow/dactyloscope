@@ -4,18 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dactyloscope</title>
-<link rel="stylesheet" href="/static/app.css?r=__REPORT_ID__"><link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="icon" href="/static/favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<script>window.__DACTY_REPORT_ID__ = "__REPORT_ID__";</script>
+<link rel="stylesheet" href="/static/app.css?v=__DACTY_VERSION__"><link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="icon" href="/static/favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<script>window.__DACTY_SEED__ = __SEED_JSON__;</script>
 </head>
 <body>
-<div class="probe">
-  <div class="top" style="padding:0 0 18px"><a class="brand" href="/"><img src="/static/logo.svg" alt="">Dactyloscope <span>__DACTY_VERSION__</span></a><nav><a href="/reports">Reports</a><a href="/docs">API</a></nav></div>
+<div class="probe" id="probe">
+  <div class="top" style="padding:0 0 18px"><a class="brand" href="/"><img src="/static/logo.svg" alt="">Dactyloscope <span>__DACTY_VERSION__</span></a></div>
   <h1>Inspecting this browser</h1>
-  <p class="lede">Report <code id="rid">__REPORT_ID__</code>. The network layer (TLS ClientHello, HTTP/2 preface, header order) was captured when this page was requested; the checks below run in the page and are saved one by one. The report opens when they finish.</p>
+  <p class="lede">The network layer (TLS ClientHello, HTTP/2 preface, header order) was captured when this page was requested; the checks below run in the page. The report appears here when they finish. Nothing is stored on the server: reload and it is gone.</p>
   <ol id="steps"></ol>
   <p id="status" class="muted small">Starting…</p>
-  <p class="small"><a id="rlink" href="/r/__REPORT_ID__">Open the report</a> (it fills in as sections arrive) or fetch it as JSON at <code>/api/report/__REPORT_ID__</code>.</p>
 </div>
+<div class="wrap" id="root" hidden></div>
+<script src="/static/ui.js?v=__DACTY_VERSION__"></script>
 <script>
 (function () {
   var NAMES = ['navigator','uadata','screen','timezone','document','engine','apis','automation','integrity','canvas','webgl','audio','fonts','permissions','media','worker','iframe','storage','timing'];
@@ -26,8 +27,12 @@
     if (name === '__start__') { status.textContent = 'Running probes…'; return; }
     if (name === '__done__') {
       var r = extra || {};
-      status.textContent = r.verdict ? 'Done: ' + r.verdict + ' (score ' + r.score + '). Opening the report…' : 'Done, but saving failed: ' + JSON.stringify(r);
-      if (!/[?&]noredirect/.test(location.search) && r.verdict) setTimeout(function () { location.replace('/r/' + window.__DACTY_REPORT_ID__); }, 600);
+      if (!r.analysis) { status.textContent = 'Done, but the analysis failed: ' + JSON.stringify(r); return; }
+      document.getElementById('probe').hidden = true;
+      var root = document.getElementById('root'); root.hidden = false;
+      root.parentNode.insertBefore(Dacty.topbar(), root);
+      document.title = 'Dactyloscope — ' + r.analysis.verdict;
+      Dacty.renderReport(root, r);
       return;
     }
     var li = rows[name]; if (!li) return; li.className = state; li.querySelector('.st').textContent = state;
@@ -36,6 +41,6 @@
   };
 })();
 </script>
-<script src="/static/probe.js?r=__REPORT_ID__"></script>
+<script src="/static/probe.js?v=__DACTY_VERSION__"></script>
 </body>
 </html>

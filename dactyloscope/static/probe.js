@@ -1,13 +1,13 @@
 /* Dactyloscope — in-page probes.
  *
- * Each section runs in isolation, is posted to the server as soon as it
- * finishes (so a crash later on loses nothing), and never throws out of its
- * wrapper. Keep this file dependency-free and tolerant of missing APIs: it
+ * Each section runs in isolation and never throws out of its wrapper. Results
+ * stay in the page until every section is done, then go to /analyze in one
+ * request together with the network seed; the server keeps nothing. Keep this file dependency-free and tolerant of missing APIs: it
  * runs inside the browser under test, which may be far from complete.
  */
 (function () {
   'use strict';
-  var REPORT_ID = window.__DACTY_REPORT_ID__;
+  var SEED = window.__DACTY_SEED__ || {};
   var ORDER = [];
   var T0 = Date.now();
   var mouseMoved = false;
@@ -50,12 +50,13 @@
   }
   function post(url, body) {
     var txt; try { txt = JSON.stringify(body); } catch (e) { txt = JSON.stringify({ __error__: 'unserialisable: ' + errStr(e) }); }
-    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: txt, keepalive: true, credentials: 'omit' });
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: txt, credentials: 'omit' });
   }
   function progress(name, state, extra) {
     try { if (window.__DACTY_PROGRESS__) window.__DACTY_PROGRESS__(name, state, extra); } catch (e) {}
   }
   var RESULTS = {};
+  var ERRORS = {};
   window.__DACTY_RESULTS__ = RESULTS;
   var SECTION_TIMEOUT_MS = 15000;  // a hung probe must never leave the report unfinished
   async function section(name, fn) {
@@ -66,9 +67,8 @@
       if (out && out.__err === 'timeout') out = { __error__: 'probe did not finish within ' + SECTION_TIMEOUT_MS + ' ms' };
     } catch (e) { out = { __error__: errStr(e) }; }
     ORDER.push(name);
-    RESULTS[name] = out;
-    try { await post('/api/report/' + REPORT_ID + '/section/' + name, out); progress(name, out && out.__error__ ? 'error' : 'done', { ms: Date.now() - t, out: out }); }
-    catch (e) { progress(name, 'post-failed', { err: errStr(e) }); }
+    if (out && out.__error__) ERRORS[name] = out.__error__; else RESULTS[name] = out;
+    progress(name, out && out.__error__ ? 'error' : 'done', { ms: Date.now() - t, out: out });
   }
 
   // ------------------------------------------------------------ navigator
@@ -624,7 +624,7 @@
       var w; var done = false;
       var t = setTimeout(function () { if (!done) { done = true; resolve({ ok: false, err: 'timeout' }); try { w.terminate(); } catch (e) {} } }, 4000);
       try {
-        w = new Worker('/static/worker.js?r=' + REPORT_ID);
+        w = new Worker('/static/worker.js?r=' + T0);
         w.onmessage = function (e) { if (!done) { done = true; clearTimeout(t); var d = e.data || {}; d.ok = true; resolve(d); try { w.terminate(); } catch (x) {} } };
         w.onerror = function (e) { if (!done) { done = true; clearTimeout(t); resolve({ ok: false, err: (e && e.message) || 'worker error' }); } };
       } catch (e) { if (!done) { done = true; clearTimeout(t); resolve({ ok: false, err: errStr(e) }); } }
@@ -718,7 +718,10 @@
     await section('storage', storageProbe);
     await section('timing', async function () { return timingProbe(); });
     var r = null;
-    try { r = await post('/api/report/' + REPORT_ID + '/done', { elapsed_ms: Date.now() - T0, order: ORDER }); r = await r.json(); } catch (e) { r = { error: errStr(e) }; }
+    var body = { created: SEED.created, label: SEED.label, client: SEED.client, network: SEED.network,
+      probes: RESULTS, probe_errors: ERRORS, elapsed_ms: Date.now() - T0, order: ORDER };
+    try { r = await post('/analyze', body); r = await r.json(); } catch (e) { r = { error: errStr(e) }; }
+    window.__DACTY_REPORT__ = r;
     progress('__done__', 'done', r);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { main(); }); else main();
